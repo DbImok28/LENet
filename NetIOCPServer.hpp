@@ -35,14 +35,6 @@ namespace LimeEngine::Net
 			return CONTAINING_RECORD(overlapped, IOContext, overlapped);
 		}
 
-//		void SetBuffer(const char* buffer)
-//		{
-//			wsaBuf.buf = const_cast<char*>(buffer);
-//		}
-//		void SetBuffer(char* buffer)
-//		{
-//			wsaBuf.buf = buffer;
-//		}
         void SetNextBuffer(const char* buffer)
         {
             SetNextBuffer(const_cast<char*>(buffer));
@@ -287,12 +279,10 @@ namespace LimeEngine::Net
 
                 if (msg[bytesTransferred - 1] == '\0')
                 {
-                    std::ostringstream oss;
-                    for (auto& buffer : ioContext->GetBuffers())
-                    {
-                        oss << buffer;
-                    }
-                    socketContext->connection.receivedMessages.emplace(oss.str());
+                    const auto buffers = ioContext->GetBuffers();
+                    std::string fullMsg = ConcatBuffers(buffers, bufferPool.size);
+                    socketContext->connection.receivedMessages.emplace(std::move(fullMsg));
+
                     std::cout << "[msg end]" << std::endl;
                     for (auto& buffer : ioContext->GetBuffers())
                     {

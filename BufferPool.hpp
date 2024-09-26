@@ -7,6 +7,37 @@
 
 namespace LimeEngine::Net
 {
+    std::string ConcatBuffers(const std::list<char*>& buffers, size_t bufferSize);
+    template <typename Iterator>
+    std::string ConcatBuffers(Iterator begin, Iterator end, size_t bufferSize)
+    {
+        size_t totalSize = 0;
+        size_t lastBufferSize;
+        {
+            auto it = begin;
+            while (std::next(it) != end)
+            {
+                totalSize += bufferSize;
+                ++it;
+            }
+            lastBufferSize = strlen(*it);
+            totalSize += lastBufferSize;
+        }
+        std::string result(totalSize, '\0');
+
+        char* dst = const_cast<char*>(result.data());
+        auto it = begin;
+        while (std::next(it) != end)
+        {
+            memcpy(dst, *it, bufferSize);
+            dst += bufferSize;
+            ++it;
+        }
+        memcpy(dst, *it, lastBufferSize);
+
+        return result;
+    }
+
     template<size_t BufferSize>
     class BufferPool {
     public:
@@ -62,7 +93,7 @@ namespace LimeEngine::Net
         char *TakeBuffer()
         {
             char* buffer = bufferPool.TakeBuffer();
-            buffers.push_back(buffer);
+            buffers.emplace_back(buffer);
             return buffer;
         }
 
@@ -75,14 +106,9 @@ namespace LimeEngine::Net
             buffers.clear();
         }
 
-        std::string ConcatBuffers()
+        std::string Concat()
         {
-            std::ostringstream oss;
-            for (auto &buffer : buffers)
-            {
-                oss << buffer;
-            }
-            return oss.str();
+            return ConcatBuffers(buffers, bufferPool.size);
         }
 
         auto begin() noexcept { return buffers.begin(); }

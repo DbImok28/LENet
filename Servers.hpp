@@ -201,7 +201,7 @@ namespace LimeEngine::Net::EchoServer
                 //connection->messagesToSend.emplace(largeMessage);
 			});
             
-            TimedTask<10>([&close]() {close = true;});
+            //TimedTask<10>([&close]() {close = true;});
 		}
 	}
 }

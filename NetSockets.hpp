@@ -138,84 +138,27 @@ namespace LimeEngine::Net
 			return true;
 		}
 
-//        template<size_t BufferSize>
-//        bool Receive(BufferPool<BufferSize>& bufferPool, std::string& outMsg) const
-//        {
-//            int bytesTransferred;
-//            char* receiveBuffer = bufferPool.TakeBuffer();
-//            bool received = Receive(receiveBuffer, BufferSize, bytesTransferred);
-//            if (!received)
-//            {
-//                bufferPool.ReturnBuffer(receiveBuffer);
-//                return false;
-//            }
-//
-//            if (receiveBuffer[bytesTransferred - 1] == '\0')
-//            {
-//                outMsg = receiveBuffer;
-//                bufferPool.ReturnBuffer(receiveBuffer);
-//                return true;
-//            }
-//
-//            std::list<char*> buffers;
-//            buffers.push_back(receiveBuffer);
-//
-//            while (true)
-//            {
-//                receiveBuffer = bufferPool.TakeBuffer();
-//                received = Receive(receiveBuffer, BufferSize, bytesTransferred);
-//                if (!received)
-//                {
-//                    bufferPool.ReturnBuffer(receiveBuffer);
-//                    for (auto &buffer: buffers)
-//                    {
-//                        bufferPool.ReturnBuffer(buffer);
-//                    }
-//                    return false;
-//                }
-//
-//                buffers.push_back(receiveBuffer);
-//
-//                if (receiveBuffer[bytesTransferred - 1] == '\0')
-//                {
-//                    std::ostringstream oss;
-//                    for (auto &buffer: buffers)
-//                    {
-//                        oss << buffer;
-//                    }
-//                    std::cout << "[msg end]" << std::endl;
-//                    for (auto &buffer: buffers)
-//                    {
-//                        bufferPool.ReturnBuffer(buffer);
-//                    }
-//                    outMsg = oss.str();
-//                    return true;
-//                }
-//            }
-//        }
-
         template<size_t BufferSize>
         bool Receive(BufferPool<BufferSize>& bufferPool, std::string& outMsg) const
         {
             BufferChain<BufferSize> bufferChain(bufferPool);
-
             int bytesTransferred;
+
             char* receiveBuffer = bufferChain.TakeBuffer();
             if (!Receive(receiveBuffer, BufferSize, bytesTransferred)) return false;
-
             if (receiveBuffer[bytesTransferred - 1] == '\0')
             {
                 outMsg = receiveBuffer;
                 return true;
             }
+
             while (true)
             {
                 receiveBuffer = bufferPool.TakeBuffer();
                 if (!Receive(receiveBuffer, BufferSize, bytesTransferred)) return false;
-
                 if (receiveBuffer[bytesTransferred - 1] == '\0')
                 {
-                    outMsg = bufferChain.ConcatBuffers();
+                    outMsg = bufferChain.Concat();
                     return true;
                 }
             }
