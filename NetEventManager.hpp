@@ -1,6 +1,5 @@
 #pragma once
-#include <queue>
-#include <functional>
+#include "NetPollServer.hpp"
 #include "NetSelectServer.hpp"
 
 namespace LimeEngine::Net
@@ -18,13 +17,13 @@ namespace LimeEngine::Net
 
     struct NetTCPDataHandler
     {
-        static bool Receive(NetSocket& socket, NetConnectionOld& connection)
+        static bool Receive(NetSocket& socket, NetConnection& connection)
         {
             std::array<char, 256> buff;
             int bytesReceived;
             if (socket.Receive(buff.data(), buff.size(), bytesReceived))
             {
-                buff[bytesReceived] = '\0';
+                //buff[bytesReceived] = '\0';
                 std::string msg = buff.data();
                 connection.receivedMessages.emplace(msg);
                 std::cout << "Receive(" << bytesReceived << "b" << ((bytesReceived != (msg.size() + 1)) ? " part" : "") << ")" << std::endl;
@@ -32,14 +31,14 @@ namespace LimeEngine::Net
             return bytesReceived != 0;
         }
 
-        static bool Send(NetSocket& socket, NetConnectionOld& connection)
+        static bool Send(NetSocket& socket, NetConnection& connection)
         {
             int bytesSent;
-            auto& msg = connection.messagesToSend.front();
-            if (socket.Send(msg.c_str(), msg.size() + 1, bytesSent))
+            NetSendMessage& sendMessage = connection.messagesToSend.front();
+            if (socket.Send(sendMessage.msg.c_str(), sendMessage.msg.size() + 1ull, bytesSent))
             {
                 connection.messagesToSend.pop();
-                std::cout << "Send(" << bytesSent << "b" << ((bytesSent != (msg.size() + 1)) ? " part" : "") << ")" << std::endl;
+                std::cout << "Send(" << bytesSent << "b" << ((bytesSent != (sendMessage.msg.size() + 1ull)) ? " part" : "") << ")" << std::endl;
             }
             return bytesSent != 0;
         }
@@ -55,7 +54,7 @@ namespace LimeEngine::Net
 
     public:
         // Thread 2
-        void AddConnection(NetSocket&& socket, NetConnectionOld& connection)
+        void AddConnection(NetSocket&& socket, NetConnection& connection)
         {
             netBufferedEventHandler.AddSocket(std::move(socket));
             activeConnections.emplace_back(connection);
@@ -88,6 +87,8 @@ namespace LimeEngine::Net
 
                 auto& connection = activeConnections[i].get();
                 auto&& netEvent = netBufferedEventHandler.At(i);
+
+                // TODO: Add buffering
 
                 //  Read
                 if (netEvent.CheckRead())
@@ -149,7 +150,7 @@ namespace LimeEngine::Net
         }
 
     private:
-        std::vector<std::reference_wrapper<NetConnectionOld>> activeConnections;
+        std::vector<std::reference_wrapper<NetConnection>> activeConnections;
         TNetEventHandler netBufferedEventHandler;
     };
 
@@ -188,7 +189,7 @@ namespace LimeEngine::Net
                 handler.HandleNetEvents();
             }
         }
-        void OnConnection(const std::function<void(NetConnectionOld&)>& handler)
+        void OnConnection(const std::function<void(NetConnection&)>& handler)
         {
             onConnection = handler;
         }
@@ -211,10 +212,10 @@ namespace LimeEngine::Net
     public:
     //private:
         NetSocket serverSocket;
-        std::list<NetConnectionOld> connections;
+        std::list<NetConnection> connections;
         std::vector<TNetEventHandler> netEventHandler;
         size_t availableServerIndex = 0ull;
 
-        std::function<void(NetConnectionOld&)> onConnection;
+        std::function<void(NetConnection&)> onConnection;
     };
 }

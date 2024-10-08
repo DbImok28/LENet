@@ -116,13 +116,13 @@ namespace LimeEngine::Net::EchoServer
 	void PollServer()
 	{
 		NetTCPServer<NetPollHandler<NetTCPDataHandler>> server(NetSocketIPv4Address(NetIPv4Address("0.0.0.0"), 3000));
-		server.OnConnection([](NetConnectionOld& connection) {
+		server.OnConnection([](NetConnection& connection) {
 			std::cout << "[User] Connect: " << connection.GetId() << std::endl;
 
-			connection.OnDisconnect([](const NetConnectionOld& connection) { std::cout << "[User] Disconnected: " << connection.GetId() << std::endl; });
+			connection.OnDisconnect([](const NetConnection& connection) { std::cout << "[User] Disconnected: " << connection.GetId() << std::endl; });
 
 			connection.OnMessage(
-				[](const NetConnectionOld& connection, const std::string& msg) { std::cout << "[User] From: " << connection.GetId() << ", msg: " << msg << std::endl; });
+				[](const NetConnection& connection, const NetReceivedMessage& receivedMessage) { std::cout << "[User] From: " << connection.GetId() << ", msg: " << receivedMessage.msg << std::endl; });
 		});
 		while (true)
 		{
@@ -145,13 +145,13 @@ namespace LimeEngine::Net::EchoServer
 	void SelectServer()
 	{
 		NetTCPServer<NetSelectHandler<NetTCPDataHandler>> server(NetSocketIPv4Address(NetIPv4Address("0.0.0.0"), 3000));
-		server.OnConnection([](NetConnectionOld& connection) {
+		server.OnConnection([](NetConnection& connection) {
 			std::cout << "[User] Connect: " << connection.GetId() << std::endl;
 
-			connection.OnDisconnect([](const NetConnectionOld& connection) { std::cout << "[User] Disconnected: " << connection.GetId() << std::endl; });
+			connection.OnDisconnect([](const NetConnection& connection) { std::cout << "[User] Disconnected: " << connection.GetId() << std::endl; });
 
 			connection.OnMessage(
-				[](const NetConnectionOld& connection, const std::string& msg) { std::cout << "[User] From: " << connection.GetId() << ", msg: " << msg << std::endl; });
+				[](const NetConnection& connection, const NetReceivedMessage& receivedMessage) { std::cout << "[User] From: " << connection.GetId() << ", msg: " << receivedMessage.msg << std::endl; });
 		});
 		while (true)
 		{
@@ -201,7 +201,9 @@ namespace LimeEngine::Net::EchoServer
                 //connection->messagesToSend.emplace(largeMessage);
 			});
             
-            //TimedTask<10>([&close]() {close = true;});
+            TimedTask<10>([&close]() {close = true;});
 		}
+
+        server.netManager.DisconnectAllConnections();
 	}
 }

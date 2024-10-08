@@ -146,13 +146,13 @@ namespace LimeEngine::Net
 			static_assert(offsetof(IOContext, overlapped) == 0, "The overlapped field must be first");
 
 			std::cout << "Wait " << timeout << "ms" << std::endl;
-			//uint32_t bytesTransferred = 0;
+
 			if (!GetQueuedCompletionStatus(
 					completionPort, reinterpret_cast<LPDWORD>(&outBytesTransferred), reinterpret_cast<PULONG_PTR>(&outKey), reinterpret_cast<LPOVERLAPPED*>(&outContext), timeout))
 			{
 				auto err = GetLastError();
-				if (err == WAIT_TIMEOUT) return false;
 
+				if (err == WAIT_TIMEOUT) return false;
 				if (err == ERROR_NETNAME_DELETED || err == ERROR_CONNECTION_ABORTED)
 				{
 					outBytesTransferred = 0;
@@ -163,8 +163,8 @@ namespace LimeEngine::Net
 				LENET_ERROR(err, "Can't to get CompletionStatus");
 				return false;
 			}
-			//std::cout << "MSG Status b" << outBytesTransferred << std::endl;
-			//outContext->bytesTransferred = bytesTransferred;
+            if (outContext == nullptr)
+                return false;
 			return true;
 		}
 		// void ReadCompleted(NetSocket& socket, IOBuffer buffer)
@@ -206,6 +206,7 @@ namespace LimeEngine::Net
 		}
 	};
 
+    // TODO: EventHandler or Manager?
 	template <typename TNetDataHandler>
 	class NetIOCPManager
 	{
@@ -215,6 +216,18 @@ namespace LimeEngine::Net
 		{
 			std::cout << "~NetIOCPManager()" << std::endl;
 		}
+
+        void DisconnectAllConnections()
+        {
+            completionPort.PostCloseStatus();
+            HandleNetEvents();
+
+            for (auto& socketContext : socketContexts)
+            {
+                socketContext->connection.ChangeStateToClose();
+            }
+            socketContexts.clear();
+        }
 
 		void AddConnection(NetSocket&& socket, NetConnection& connection)
 		{
@@ -398,7 +411,7 @@ namespace LimeEngine::Net
 
 		void HandleNetEvents()
 		{
-			server.HandleNetEvents();
+            netManager.HandleNetEvents();
 		}
 		void OnConnection(const std::function<void(NetConnection&)>& handler)
 		{
@@ -410,7 +423,7 @@ namespace LimeEngine::Net
 		{
 			connections.emplace_back();
 			auto& connection = connections.back();
-			server.AddConnection(std::move(socket), connection);
+            netManager.AddConnection(std::move(socket), connection);
 			onConnection(connection);
 		}
 
@@ -418,7 +431,7 @@ namespace LimeEngine::Net
 		//private:
 		NetSocket serverSocket;
 		std::list<NetConnection> connections;
-		NetIOCPManager<NetTCPAsyncDataHandler> server;
+		NetIOCPManager<NetTCPAsyncDataHandler> netManager;
 
 		std::function<void(NetConnection&)> onConnection;
 	};
