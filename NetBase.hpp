@@ -15,28 +15,40 @@
 #endif
 #include <winsock2.h>
 #include <WS2tcpip.h>
+#include "NetLogger.hpp"
 
-
-void ShowWSAErrorMessage(int err)
+namespace LimeEngine::Net
 {
-    char* s = nullptr;
-    FormatMessageA(
-            FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, nullptr, err, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR)&s, 0, nullptr);
-    std::cout << "Desc: " << s << std::endl;
-    LocalFree(s);
+    void ShowWSAErrorMessage(int err) {
+        char *s = nullptr;
+        FormatMessageA(
+                FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, nullptr,
+                err, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR) &s, 0, nullptr);
+        NetLogger::LogCore("Error: desc {}", s);
+        LocalFree(s);
+    }
+
+    std::string GetWSAErrorMessage(int err) {
+        char *s = nullptr;
+        FormatMessageA(
+                FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, nullptr,
+                err, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), (LPSTR) &s, 0, nullptr);
+        std::string msg = s;
+        LocalFree(s);
+        return msg;
+    }
 }
 
 #define LENET_ERROR(err, msg)                                            \
 	{                                                                    \
 		int _err = err;                                                  \
-		std::cout << "failed: code " << _err << " " << msg << std::endl; \
-		ShowWSAErrorMessage(_err);                                       \
+        ::LimeEngine::Net::NetLogger::LogCore("Error: code {}, {}\n desc: ", _err, msg, GetWSAErrorMessage(_err));             \
 		__debugbreak();                                                  \
 	}
 
 #define LENET_MSG_ERROR(msg)                                             \
 	{                                                                    \
-		std::cout << "failed: " << msg << std::endl;                    \
+        ::LimeEngine::Net::NetLogger::NetLogger::LogCore("Error: {}", msg);\
 		__debugbreak();                                                  \
 	}
 

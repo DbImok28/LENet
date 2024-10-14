@@ -17,30 +17,62 @@ namespace LimeEngine::Net
 
     struct NetTCPDataHandler
     {
-        static bool Receive(NetSocket& socket, NetConnection& connection)
+//        static bool Receive(NetSocket& socket, NetConnection& connection)
+//        {
+//            std::array<char, 256> buff;
+//            int bytesReceived;
+//            if (socket.Receive(buff.data(), buff.size(), bytesReceived))
+//            {
+//                //buff[bytesReceived] = '\0';
+//                std::string msg = buff.data();
+//                connection.receivedMessages.emplace(msg);
+//                std::cout << msg << std::endl;
+//                std::cout << "Receive(" << bytesReceived << "b" << ((bytesReceived != (msg.size() + 1)) ? " part" : "") << ")" << std::endl;
+//            }
+//            return bytesReceived != 0;
+//        }
+//
+//        static bool Send(NetSocket& socket, NetConnection& connection)
+//        {
+//            int bytesSent;
+//            NetSendMessage& sendMessage = connection.messagesToSend.front();
+//            if (socket.Send(sendMessage.msg.c_str(), sendMessage.msg.size() + 1ull, bytesSent))
+//            {
+//                connection.messagesToSend.pop();
+//                std::cout << "Send(" << bytesSent << "b" << ((bytesSent != (sendMessage.msg.size() + 1ull)) ? " part" : "") << ")" << std::endl;
+//            }
+//            return bytesSent != 0;
+//        }
+
+        static bool Receive(NetSocket& socket, char* buffer, int bufferSize, int& outBytesTransferred)
         {
-            std::array<char, 256> buff;
-            int bytesReceived;
-            if (socket.Receive(buff.data(), buff.size(), bytesReceived))
+            //std::array<char, 256> buff;
+            //int bytesReceived;
+            if (socket.Receive(buffer, bufferSize, outBytesTransferred))
             {
+                NetLogger::LogCore("Receive {}b: {}", outBytesTransferred, buffer);
                 //buff[bytesReceived] = '\0';
-                std::string msg = buff.data();
-                connection.receivedMessages.emplace(msg);
-                std::cout << "Receive(" << bytesReceived << "b" << ((bytesReceived != (msg.size() + 1)) ? " part" : "") << ")" << std::endl;
+                //std::string msg = buff.data();
+                //connection.receivedMessages.emplace(msg);
+                //std::cout << buffer << std::endl;
+                //std::cout << "Receive(" << outBytesTransferred << "b" /*<< ((bytesTransferred != (msg.size() + 1)) ? " part" : "")*/ << ")" << std::endl;
             }
-            return bytesReceived != 0;
+            return outBytesTransferred != 0;
         }
 
-        static bool Send(NetSocket& socket, NetConnection& connection)
+        static bool Send(NetSocket& socket, const NetSendMessage& sendMessage)
         {
-            int bytesSent;
-            NetSendMessage& sendMessage = connection.messagesToSend.front();
-            if (socket.Send(sendMessage.msg.c_str(), sendMessage.msg.size() + 1ull, bytesSent))
+            //int bytesSent;
+            //NetSendMessage& sendMessage = connection.messagesToSend.front();
+            int bytesTransferred;
+            if (socket.Send(sendMessage.msg.c_str(), static_cast<int>(sendMessage.msg.size()) + 1, bytesTransferred))
             {
-                connection.messagesToSend.pop();
-                std::cout << "Send(" << bytesSent << "b" << ((bytesSent != (sendMessage.msg.size() + 1ull)) ? " part" : "") << ")" << std::endl;
+                NetLogger::LogCore("Send {}b{}: {}", bytesTransferred, ((bytesTransferred != (sendMessage.msg.size() + 1ull)) ? " part" : ""), sendMessage.msg);
+                //connection.messagesToSend.pop();
+                //std::cout << "Send(" << bytesTransferred << "b" << ((bytesTransferred != (sendMessage.msg.size() + 1ull)) ? " part" : "") << ")" << std::endl;
+
             }
-            return bytesSent != 0;
+            return bytesTransferred != 0;
         }
     };
 
@@ -93,9 +125,16 @@ namespace LimeEngine::Net
                 //  Read
                 if (netEvent.CheckRead())
                 {
-                    if (!TNetDataHandler::Receive(netEvent.fd, connection))
+                    std::array<char, 256> buff;
+                    int bytesTransferred;
+
+                    if (TNetDataHandler::Receive(netEvent.fd, buff.data(), buff.size(), bytesTransferred))
                     {
-                        std::cout << "[Net]:[Receive=0] Client disconnected: " << netEvent.fd.GetId() << std::endl;
+                        connection.receivedMessages.emplace(buff.data());
+                    }
+                    else
+                    {
+                        NetLogger::LogCore("Receive=0, Client {} disconnected", netEvent.fd.GetId());
                         Disconnect(i);
                         continue;
                     }
@@ -104,9 +143,13 @@ namespace LimeEngine::Net
                 // Write
                 if (netEvent.CheckWrite() && !connection.messagesToSend.empty())
                 {
-                    if (!TNetDataHandler::Send(netEvent.fd, connection))
+                    if (TNetDataHandler::Send(netEvent.fd, connection.messagesToSend.front()))
                     {
-                        std::cout << "[Net]:[Send=0] Client disconnected: " << netEvent.fd.GetId() << std::endl;
+                        connection.messagesToSend.pop();
+                    }
+                    else
+                    {
+                        NetLogger::LogCore("Send=0, Client {} disconnected", netEvent.fd.GetId());
                         Disconnect(i);
                         continue;
                     }
@@ -119,7 +162,7 @@ namespace LimeEngine::Net
                 // Disconnections
                 if (netEvent.CheckDisconnect())
                 {
-                    std::cout << "[Net] Client disconnected: " << netEvent.fd.GetId() << std::endl;
+                    NetLogger::LogCore("Client {} disconnected", netEvent.fd.GetId());
                     Disconnect(i);
                     continue;
                 }

@@ -1,6 +1,7 @@
 #pragma once
 #include <functional>
-#include "NetPollServer.hpp"
+#include "NetConnection.hpp"
+#include "NetSockets.hpp"
 #include <cstddef>
 #include "BufferPool.hpp"
 

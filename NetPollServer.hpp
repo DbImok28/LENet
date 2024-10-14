@@ -86,28 +86,29 @@ namespace LimeEngine::Net
 
         void Log() const
         {
-            std::cout << "[Poll] Expected:";
+            std::ostringstream oss;
+            oss << "[Poll] Expected:";
             for (auto& pollFD : pollFDs)
             {
                 auto& wsaPollFD = *reinterpret_cast<const WSAPOLLFD*>(&pollFD);
-                std::cout << '[';
-                std::cout << ((wsaPollFD.events & POLLRDNORM) ? "R" : "");
-                std::cout << ((wsaPollFD.events & POLLWRNORM) ? "W" : "");
-                std::cout << ((wsaPollFD.events & POLLERR) ? "E" : "");
-                std::cout << ((wsaPollFD.events & POLLHUP) ? "D" : "");
-                std::cout << ']';
+                oss << '[';
+                oss << ((wsaPollFD.events & POLLRDNORM) ? "R" : "");
+                oss << ((wsaPollFD.events & POLLWRNORM) ? "W" : "");
+                oss << ((wsaPollFD.events & POLLERR) ? "E" : "");
+                oss << ((wsaPollFD.events & POLLHUP) ? "D" : "");
+                oss << ']';
             }
-            std::cout << " Actual:";
+            oss << " Actual:";
             for (auto& pollFD : pollFDs)
             {
-                std::cout << '[';
-                std::cout << ((pollFD.CheckRead()) ? "R" : "");
-                std::cout << ((pollFD.CheckWrite()) ? "W" : "");
-                std::cout << ((pollFD.CheckExcept()) ? "E" : "");
-                std::cout << ((pollFD.CheckDisconnect()) ? "D" : "");
-                std::cout << ']';
+                oss << '[';
+                oss << ((pollFD.CheckRead()) ? "R" : "");
+                oss << ((pollFD.CheckWrite()) ? "W" : "");
+                oss << ((pollFD.CheckExcept()) ? "E" : "");
+                oss << ((pollFD.CheckDisconnect()) ? "D" : "");
+                oss << ']';
             }
-            std::cout << std::endl;
+            NetLogger::LogCore(oss.str());
         }
 
     private:

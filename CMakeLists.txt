@@ -3,4 +3,4 @@ project(LENet)
 
 set(CMAKE_CXX_STANDARD 20)
 
-add_executable(LENet main.cpp BufferPool.cpp BufferPool.hpp NetConnection.hpp)
+add_executable(LENet main.cpp BufferPool.cpp BufferPool.hpp NetConnection.hpp NetLogger.hpp)

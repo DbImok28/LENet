@@ -129,7 +129,7 @@ namespace LimeEngine::Net::EchoServer
 			server.Accept();
 			server.HandleNetEvents();
 			TimedTask<5>([&server]() {
-				std::cout << "Update()" << std::endl;
+				std::cout << "[User] Update()" << std::endl;
 				server.Update();
 			});
 			TimedTask<3>([&server]() {

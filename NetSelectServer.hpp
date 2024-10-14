@@ -130,25 +130,27 @@ namespace LimeEngine::Net
 
         void Log() const
         {
-            std::cout << "[Select] Expected:";
+            std::ostringstream oss;
+            oss << "[Select] Expected:";
             for (auto& socket : sockets)
             {
-                std::cout << '[';
-                std::cout << ((FD_ISSET(socket.GetSocket(), &readFDs)) ? "R" : "");
-                std::cout << ((FD_ISSET(socket.GetSocket(), &writeFDs)) ? "W" : "");
-                std::cout << ((FD_ISSET(socket.GetSocket(), &exceptFDs)) ? "E" : "");
-                std::cout << ']';
+                oss << '[';
+                oss << ((FD_ISSET(socket.GetSocket(), &readFDs)) ? "R" : "");
+                oss << ((FD_ISSET(socket.GetSocket(), &writeFDs)) ? "W" : "");
+                oss << ((FD_ISSET(socket.GetSocket(), &exceptFDs)) ? "E" : "");
+                oss << ']';
             }
-            std::cout << " Actual:";
+            oss << " Actual:";
             for (auto& socket : sockets)
             {
-                std::cout << '[';
-                std::cout << ((FD_ISSET(socket.GetSocket(), &readFDsCopy)) ? "R" : "");
-                std::cout << ((FD_ISSET(socket.GetSocket(), &writeFDsCopy)) ? "W" : "");
-                std::cout << ((FD_ISSET(socket.GetSocket(), &exceptFDsCopy)) ? "E" : "");
-                std::cout << ']';
+                oss << '[';
+                oss << ((FD_ISSET(socket.GetSocket(), &readFDsCopy)) ? "R" : "");
+                oss << ((FD_ISSET(socket.GetSocket(), &writeFDsCopy)) ? "W" : "");
+                oss << ((FD_ISSET(socket.GetSocket(), &exceptFDsCopy)) ? "E" : "");
+                oss << ']';
             }
-            std::cout << std::endl;
+            oss << std::endl;
+            NetLogger::LogCore(oss.str());
         }
 
     private:
