@@ -17,60 +17,21 @@ namespace LimeEngine::Net
 
     struct NetTCPDataHandler
     {
-//        static bool Receive(NetSocket& socket, NetConnection& connection)
-//        {
-//            std::array<char, 256> buff;
-//            int bytesReceived;
-//            if (socket.Receive(buff.data(), buff.size(), bytesReceived))
-//            {
-//                //buff[bytesReceived] = '\0';
-//                std::string msg = buff.data();
-//                connection.receivedMessages.emplace(msg);
-//                std::cout << msg << std::endl;
-//                std::cout << "Receive(" << bytesReceived << "b" << ((bytesReceived != (msg.size() + 1)) ? " part" : "") << ")" << std::endl;
-//            }
-//            return bytesReceived != 0;
-//        }
-//
-//        static bool Send(NetSocket& socket, NetConnection& connection)
-//        {
-//            int bytesSent;
-//            NetSendMessage& sendMessage = connection.messagesToSend.front();
-//            if (socket.Send(sendMessage.msg.c_str(), sendMessage.msg.size() + 1ull, bytesSent))
-//            {
-//                connection.messagesToSend.pop();
-//                std::cout << "Send(" << bytesSent << "b" << ((bytesSent != (sendMessage.msg.size() + 1ull)) ? " part" : "") << ")" << std::endl;
-//            }
-//            return bytesSent != 0;
-//        }
-
         static bool Receive(NetSocket& socket, char* buffer, int bufferSize, int& outBytesTransferred)
         {
-            //std::array<char, 256> buff;
-            //int bytesReceived;
             if (socket.Receive(buffer, bufferSize, outBytesTransferred))
             {
                 NetLogger::LogCore("Receive {}b: {}", outBytesTransferred, buffer);
-                //buff[bytesReceived] = '\0';
-                //std::string msg = buff.data();
-                //connection.receivedMessages.emplace(msg);
-                //std::cout << buffer << std::endl;
-                //std::cout << "Receive(" << outBytesTransferred << "b" /*<< ((bytesTransferred != (msg.size() + 1)) ? " part" : "")*/ << ")" << std::endl;
             }
             return outBytesTransferred != 0;
         }
 
         static bool Send(NetSocket& socket, const NetSendMessage& sendMessage)
         {
-            //int bytesSent;
-            //NetSendMessage& sendMessage = connection.messagesToSend.front();
             int bytesTransferred;
             if (socket.Send(sendMessage.msg.c_str(), static_cast<int>(sendMessage.msg.size()) + 1, bytesTransferred))
             {
                 NetLogger::LogCore("Send {}b{}: {}", bytesTransferred, ((bytesTransferred != (sendMessage.msg.size() + 1ull)) ? " part" : ""), sendMessage.msg);
-                //connection.messagesToSend.pop();
-                //std::cout << "Send(" << bytesTransferred << "b" << ((bytesTransferred != (sendMessage.msg.size() + 1ull)) ? " part" : "") << ")" << std::endl;
-
             }
             return bytesTransferred != 0;
         }
