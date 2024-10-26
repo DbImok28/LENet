@@ -6,7 +6,7 @@ namespace LimeEngine::Net
 {
 	struct PollFD
 	{
-        explicit PollFD(NetSocket&& fd, SHORT events = POLLRDNORM, SHORT revents = 0) : fd(std::move(fd)), events(events), revents(revents) {}
+        explicit PollFD(SOCKET fd, SHORT events = POLLRDNORM, SHORT revents = 0) : fd(fd), events(events), revents(revents) {}
 
         bool CheckRead() const
         {
@@ -24,29 +24,31 @@ namespace LimeEngine::Net
         {
             return revents & POLLHUP;
         }
+        bool IsChanged() const
+        {
+            return revents != 0;
+        }
 
         void SetFlag(SHORT flags = POLLRDNORM)
         {
             events = flags;
         }
 
-    public:
-		NetSocket fd;
-
     private:
+		SOCKET fd;
 		SHORT events;
 		SHORT revents;
 	};
 
-    class NetPollManager
+    class NetPollBuffer
     {
     public:
-        bool AddSocket(NetSocket&& socket)
+        bool Add(SOCKET fd)
         {
-            pollFDs.emplace_back(std::move(socket), POLLRDNORM, 0);
+            pollFDs.emplace_back(fd, POLLRDNORM, 0);
             return true;
         }
-        void RemoveSocket(size_t index)
+        void Remove(size_t index)
         {
             pollFDs.erase(std::begin(pollFDs) + index);
         }

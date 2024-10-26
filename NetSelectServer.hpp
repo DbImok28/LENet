@@ -6,7 +6,7 @@ namespace LimeEngine::Net
 {
     struct SelectFD
     {
-        SelectFD(NetSocket &fd, bool read = false, bool written = false, bool excepted = false) : fd(fd), read(read), written(written), excepted(excepted) {}
+        explicit SelectFD(SOCKET fd, bool read = false, bool written = false, bool excepted = false) : fd(fd), read(read), written(written), excepted(excepted) {}
 
         bool CheckRead() const
         {
@@ -24,28 +24,29 @@ namespace LimeEngine::Net
         {
             return false;
         }
-
-    public:
-        NetSocket& fd;
+        bool IsChanged() const
+        {
+            return read || written || excepted;
+        }
 
     private:
+        SOCKET fd;
         bool read;
         bool written;
         bool excepted;
     };
 
-    class NetSelectManager
+    class NetSelectBuffer
     {
     public:
-        NetSelectManager() noexcept
+        NetSelectBuffer() noexcept
         {
             FD_ZERO(&readFDs);
             FD_ZERO(&writeFDs);
             FD_ZERO(&exceptFDs);
         }
-        bool AddSocket(NetSocket&& socket)
+        bool Add(SOCKET fd)
         {
-            SOCKET fd = socket.GetSocket();
             if (fd >= FD_SETSIZE)
             {
                 LENET_MSG_ERROR(std::format("Unable to add socket for select. Maximum allowed socket value = {}(FD_SETSIZE), current value {}", FD_SETSIZE, fd));
@@ -62,12 +63,12 @@ namespace LimeEngine::Net
                 largestSocket = fd;
             }
 #endif
-            sockets.emplace_back(std::move(socket));
+            sockets.emplace_back(fd);
             return true;
         }
-        void RemoveSocket(size_t index)
+        void Remove(size_t index)
         {
-            SOCKET fd = sockets[index].GetSocket();
+            SOCKET fd = sockets[index];
             FD_CLR(fd, &readFDs);
             FD_CLR(fd, &writeFDs);
             FD_CLR(fd, &exceptFDs);
@@ -75,9 +76,7 @@ namespace LimeEngine::Net
 #ifndef LENET_WIN32
             if (largestSocket == fd)
             {
-                auto& fds = *reinterpret_cast<std::vector<SOCKET>*>(&sockets);
-                largestSocket = *std::max_element(std::begin(fds), std::end(fds));
-                //largestSocket = std::max_element(std::begin(sockets), std::end(sockets), [](auto& socket){ return socket.GetSocket();})->GetSocket();
+                largestSocket = *std::max_element(std::begin(sockets), std::end(sockets));
             }
 #endif
             sockets.erase(std::begin(sockets) + index);
@@ -100,15 +99,13 @@ namespace LimeEngine::Net
                 LENET_ERROR(WSAGetLastError(), "Can't to select");
                 return false;
             }
-            //int result = select(largestSocket, &readFDsCopy, &writeFDsCopy, &exceptFDsCopy, nullptr);
             return result;
         }
 
         SelectFD At(size_t index)
         {
-            auto& socket = sockets[index];
-            auto fd = socket.GetSocket();
-            return {socket, static_cast<bool>(FD_ISSET(fd, &readFDsCopy)), static_cast<bool>(FD_ISSET(fd, &writeFDsCopy)),static_cast<bool>(FD_ISSET(fd, &exceptFDsCopy))};
+            SOCKET fd = sockets[index];
+            return SelectFD{fd, static_cast<bool>(FD_ISSET(fd, &readFDsCopy)), static_cast<bool>(FD_ISSET(fd, &writeFDsCopy)), static_cast<bool>(FD_ISSET(fd, &exceptFDsCopy))};
         }
 
         size_t Count() const
@@ -121,11 +118,11 @@ namespace LimeEngine::Net
         }
         void SetWriteFlag(size_t index)
         {
-            FD_SET(sockets[index].GetSocket(), &writeFDs);
+            FD_SET(sockets[index], &writeFDs);
         }
         void ResetWriteFlag(size_t index)
         {
-            FD_CLR(sockets[index].GetSocket(), &writeFDs);
+            FD_CLR(sockets[index], &writeFDs);
         }
 
         void Log() const
@@ -135,27 +132,27 @@ namespace LimeEngine::Net
             for (auto& socket : sockets)
             {
                 oss << '[';
-                oss << ((FD_ISSET(socket.GetSocket(), &readFDs)) ? "R" : "");
-                oss << ((FD_ISSET(socket.GetSocket(), &writeFDs)) ? "W" : "");
-                oss << ((FD_ISSET(socket.GetSocket(), &exceptFDs)) ? "E" : "");
+                oss << ((FD_ISSET(socket, &readFDs)) ? "R" : "");
+                oss << ((FD_ISSET(socket, &writeFDs)) ? "W" : "");
+                oss << ((FD_ISSET(socket, &exceptFDs)) ? "E" : "");
                 oss << ']';
             }
             oss << " Actual:";
             for (auto& socket : sockets)
             {
                 oss << '[';
-                oss << ((FD_ISSET(socket.GetSocket(), &readFDsCopy)) ? "R" : "");
-                oss << ((FD_ISSET(socket.GetSocket(), &writeFDsCopy)) ? "W" : "");
-                oss << ((FD_ISSET(socket.GetSocket(), &exceptFDsCopy)) ? "E" : "");
+                oss << ((FD_ISSET(socket, &readFDsCopy)) ? "R" : "");
+                oss << ((FD_ISSET(socket, &writeFDsCopy)) ? "W" : "");
+                oss << ((FD_ISSET(socket, &exceptFDsCopy)) ? "E" : "");
                 oss << ']';
             }
-            oss << std::endl;
             NetLogger::LogCore(oss.str());
         }
 
     private:
-        std::vector<NetSocket> sockets;
+        std::vector<SOCKET> sockets;
         //std::array<NetSocket, FD_SETSIZE> sockets;
+
         fd_set readFDs;
         fd_set writeFDs;
         fd_set exceptFDs;

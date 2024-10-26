@@ -1,8 +1,8 @@
 #pragma once
 
 #include "NetSockets.hpp"
-#include "NetEventManager.hpp"
-#include "NetIOCPServer.hpp"
+#include "NetBufferBasedEventManager.hpp"
+#include "NetIOCPEventManager.hpp"
 
 namespace LimeEngine::Net::EchoServer
 {
@@ -173,7 +173,7 @@ namespace LimeEngine::Net::EchoServer
 
 	void IOCPServer()
 	{
-		NetTCPIOCPServer<NetIOCPManager<NetTCPAsyncDataHandler>> server(NetSocketIPv4Address(NetIPv4Address("0.0.0.0"), 3000));
+		NetTCPIOCPServer<NetIOCPEventManager<NetTCPAsyncDataHandler, NetEventHandler>> server(NetSocketIPv4Address(NetIPv4Address("0.0.0.0"), 3000));
 		server.OnConnection([](NetConnection& connection) {
 			std::cout << "[User] Connect: " << connection.GetId() << std::endl;
 
@@ -204,6 +204,6 @@ namespace LimeEngine::Net::EchoServer
             TimedTask<10>([&close]() {close = true;});
 		}
 
-        server.netManager.DisconnectAllConnections();
+        server.netEventHandler.DisconnectAllConnections();
 	}
 }

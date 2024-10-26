@@ -4,15 +4,6 @@
 
 namespace LimeEngine::Net
 {
-	enum class NetStatus
-	{
-		Init,
-		Error,
-		Opened,
-		MarkForClose,
-		Closed
-	};
-
 	class NetSocket
 	{
 	public:
@@ -36,18 +27,10 @@ namespace LimeEngine::Net
 		NetSocket() noexcept = default;
 		explicit NetSocket(SOCKET _socket) noexcept : _socket(_socket) {}
 		explicit NetSocket(NetAddressType addressType, bool async = false)
-			//: _socket(::WSASocket(static_cast<int>(addressType), SOCK_STREAM, IPPROTO_IP, NULL, 0, WSA_FLAG_OVERLAPPED))
-			:
-			_socket(WSASocket(static_cast<int>(addressType), SOCK_STREAM, IPPROTO_TCP, nullptr, 0, async ? WSA_FLAG_OVERLAPPED : 0))
+			: _socket(WSASocketW(static_cast<int>(addressType), SOCK_STREAM, IPPROTO_TCP, nullptr, 0, async ? WSA_FLAG_OVERLAPPED : 0))
 		{
 			if (_socket == INVALID_SOCKET) { LENET_ERROR(WSAGetLastError(), "Can't create socket"); }
 		}
-		//        NetSocket(NetAddressType addressType)
-		//                :
-		//                _socket(socket(static_cast<int>(addressType), SOCK_STREAM, IPPROTO_TCP))
-		//        {
-		//            if (_socket == INVALID_SOCKET) { LENET_ERROR(WSAGetLastError(), "Can't create socket"); }
-		//        }
 		~NetSocket()
 		{
 			Close();
@@ -107,34 +90,42 @@ namespace LimeEngine::Net
 			return true;
 		}
 
-		int Send(const std::string& msg, int& outBytesSent)
+		int Send(const std::string& msg, int& outBytesTransferred)
 		{
-			return Send(msg.c_str(), msg.length(), outBytesSent);
+			return Send(msg.c_str(), msg.length(), outBytesTransferred);
 		}
-		bool Send(const char* buff, int buffSize, int& outBytesSent) const
+		bool Send(const char* buff, int buffSize, int& outBytesTransferred) const
 		{
-			outBytesSent = send(_socket, buff, buffSize, 0);
-			if (outBytesSent == SOCKET_ERROR)
+            outBytesTransferred = send(_socket, buff, buffSize, 0);
+			if (outBytesTransferred == SOCKET_ERROR)
 			{
 				int err = WSAGetLastError();
-				if (err != WSAEWOULDBLOCK) LENET_ERROR(err, "Can't send message to Client");
-				//outBytesSent = 0;
+                if (err == WSAECONNRESET || err == WSAEWOULDBLOCK)
+                {
+                    outBytesTransferred = 0;
+                    return false;
+                }
+				LENET_ERROR(err, "Can't send message to Client");
 				return false;
 			}
-			if (outBytesSent == 0) return false;
+			if (outBytesTransferred == 0) return false;
 			return true;
 		}
-		bool Receive(char* buff, int buffSize, int& outBytesReceived) const
+		bool Receive(char* buff, int buffSize, int& outBytesTransferred) const
 		{
-			outBytesReceived = recv(_socket, buff, buffSize, 0);
-			if (outBytesReceived == SOCKET_ERROR)
+            outBytesTransferred = recv(_socket, buff, buffSize, 0);
+			if (outBytesTransferred == SOCKET_ERROR)
 			{
 				int err = WSAGetLastError();
-				if (err != WSAEWOULDBLOCK) LENET_ERROR(err, "Can't receive message from Client");
-				//outBytesReceived = 0;
+                if (err == WSAECONNRESET || err == WSAEWOULDBLOCK)
+                {
+                    outBytesTransferred = 0;
+                    return false;
+                }
+				LENET_ERROR(err, "Can't receive message from Client");
 				return false;
 			}
-			if (outBytesReceived == 0) return false;
+			if (outBytesTransferred == 0) return false;
 			return true;
 		}
 
@@ -179,7 +170,7 @@ namespace LimeEngine::Net
 			shutdown(_socket, SD_BOTH);
 		}
 
-		SOCKET GetSocket() const
+		SOCKET GetNativeSocket() const
 		{
 			return _socket;
 		}

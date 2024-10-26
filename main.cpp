@@ -62,6 +62,20 @@ int main(int argc, char* argv[])
         }
     }
 
+    int serverTypeOption = 1;
+    if (cmdOptionExists(argv, argv+argc, "--poll"))
+    {
+        serverTypeOption = 1;
+    }
+    else if (cmdOptionExists(argv, argv+argc, "--select"))
+    {
+        serverTypeOption = 2;
+    }
+    else if (cmdOptionExists(argv, argv+argc, "--iocp"))
+    {
+        serverTypeOption = 3;
+    }
+
 //    char* filename = getCmdOption(argv, argv + argc, "-f");
 //    if (filename)
 //    {
@@ -78,9 +92,14 @@ int main(int argc, char* argv[])
 
 		if (option == 1)
 		{
-            LimeEngine::Net::EchoServer::PollServer();
-            //LimeEngine::Net::EchoServer::SelectServer();
-            //LimeEngine::Net::EchoServer::IOCPServer();
+            switch (serverTypeOption)
+            {
+                case 1: LimeEngine::Net::EchoServer::PollServer(); break;
+                case 2: LimeEngine::Net::EchoServer::SelectServer(); break;
+                case 3: LimeEngine::Net::EchoServer::IOCPServer(); break;
+
+                default: LimeEngine::Net::EchoServer::IOCPServer(); break;
+            }
 			break;
 		}
 		else if (option == 2)
@@ -95,6 +114,7 @@ int main(int argc, char* argv[])
 	WSACleanup();
 
 	std::cout << "Exit" << std::endl;
+    std::cout << "Press any button..." << std::endl;
 	int q = std::cin.get();
 	return 0;
 }

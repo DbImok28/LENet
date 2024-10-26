@@ -1,7 +1,7 @@
 #pragma once
+#include <string>
 #include <queue>
 #include <functional>
-//#include "NetSockets.hpp"
 
 namespace LimeEngine::Net
 {
@@ -26,6 +26,15 @@ namespace LimeEngine::Net
     public:
         std::string msg;
         //size_t bytesTransferred = 0;
+    };
+
+    enum class NetStatus
+    {
+        Init,
+        Error,
+        Opened,
+        MarkForClose,
+        Closed
     };
 
 	class NetConnection
