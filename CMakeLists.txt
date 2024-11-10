@@ -3,4 +3,4 @@ project(LENet)
 
 set(CMAKE_CXX_STANDARD 20)
 
-add_executable(LENet main.cpp BufferPool.cpp NetEventHandler.cpp WinError.cpp WinSocketError.cpp)
+add_executable(LENet main.cpp BufferPool.cpp NetEventHandler.cpp WinSocketError.cpp NetContext.cpp NetBase.cpp)

@@ -1,12 +1,16 @@
 #pragma once
-#include "NetConnection.hpp"
-#include "NetSockets.hpp"
+#include "NetBufferBasedEventManager.hpp"
 
 namespace LimeEngine::Net
 {
+    class NetSelectBuffer;
+
+    template<typename TNetDataHandler, typename TNetEventHandler = NetEventHandler>
+    using NetSelectEventManager = NetBufferBasedEventManager<NetSelectBuffer, TNetDataHandler, TNetEventHandler>;
+
     struct SelectFD
     {
-        explicit SelectFD(SOCKET fd, bool read = false, bool written = false, bool excepted = false) : fd(fd), read(read), written(written), excepted(excepted) {}
+        explicit SelectFD(NativeSocket fd, bool read = false, bool written = false, bool excepted = false) : fd(fd), read(read), written(written), excepted(excepted) {}
 
         bool CheckRead() const
         {
@@ -30,7 +34,7 @@ namespace LimeEngine::Net
         }
 
     private:
-        SOCKET fd;
+        NativeSocket fd;
         bool read;
         bool written;
         bool excepted;
@@ -45,7 +49,7 @@ namespace LimeEngine::Net
             FD_ZERO(&writeFDs);
             FD_ZERO(&exceptFDs);
         }
-        bool Add(SOCKET fd)
+        bool Add(NativeSocket fd)
         {
             if (fd >= FD_SETSIZE)
             {
@@ -68,7 +72,7 @@ namespace LimeEngine::Net
         }
         void Remove(size_t index)
         {
-            SOCKET fd = sockets[index];
+            NativeSocket fd = sockets[index];
             FD_CLR(fd, &readFDs);
             FD_CLR(fd, &writeFDs);
             FD_CLR(fd, &exceptFDs);
@@ -96,7 +100,7 @@ namespace LimeEngine::Net
             if (result < 0)
             {
                 // EWOULDBLOCK
-                LENET_ERROR(WSAGetLastError(), "Can't to select");
+                LENET_LAST_ERROR_MSG("Can't to select");
                 return false;
             }
             return result;
@@ -104,7 +108,7 @@ namespace LimeEngine::Net
 
         SelectFD At(size_t index)
         {
-            SOCKET fd = sockets[index];
+            NativeSocket fd = sockets[index];
             return SelectFD{fd, static_cast<bool>(FD_ISSET(fd, &readFDsCopy)), static_cast<bool>(FD_ISSET(fd, &writeFDsCopy)), static_cast<bool>(FD_ISSET(fd, &exceptFDsCopy))};
         }
 
@@ -150,7 +154,7 @@ namespace LimeEngine::Net
         }
 
     private:
-        std::vector<SOCKET> sockets;
+        std::vector<NativeSocket> sockets;
         //std::array<NetSocket, FD_SETSIZE> sockets;
 
         fd_set readFDs;

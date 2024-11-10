@@ -13,7 +13,6 @@ namespace LimeEngine::Net
 
     public:
         std::string msg;
-        //size_t bytesTransferred = 0;
         bool sended = false;
 	};
 
@@ -25,7 +24,6 @@ namespace LimeEngine::Net
 
     public:
         std::string msg;
-        //size_t bytesTransferred = 0;
     };
 
     enum class NetStatus

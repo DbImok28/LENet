@@ -1,7 +1,8 @@
 #pragma once
 
 #include "NetSockets.hpp"
-#include "NetBufferBasedEventManager.hpp"
+#include "NetPollEventManager.hpp"
+#include "NetSelectEventManager.hpp"
 #include "NetIOCPEventManager.hpp"
 
 namespace LimeEngine::Net::EchoServer
@@ -25,19 +26,9 @@ namespace LimeEngine::Net::EchoServer
 		int bytesReceived;
 		if (socket.Receive(buf.data(), buf.size(), bytesReceived))
 		{
-			std::cout << "[soc " << socket.GetId() << "][recv " << bytesReceived << "b] " << buf.data() << std::endl;
+            NetLogger::LogUser("[soc: {}][recv {}b] {}", socket.GetId(), bytesReceived, buf.data());
 			return true;
 		}
-		//std::cout << "[receive " << bytesReceived << "b fail]: " << std::endl;
-
-//        BufferPool<256> bufferPool;
-//        std::string msg;
-//        if (socket.Receive(bufferPool, msg))
-//        {
-//            std::cout << "[soc " << socket.GetId() << "][recv " << msg.size() << "b] " << msg << std::endl;
-//            return true;
-//        }
-
         return false;
 	}
 
@@ -46,10 +37,9 @@ namespace LimeEngine::Net::EchoServer
 		int bytesSent;
 		if (socket.Send(msg.c_str(), msg.size() + 1, bytesSent))
 		{
-			std::cout << "[soc " << socket.GetId() << "][send " << bytesSent << "b] " << msg << std::endl;
+            NetLogger::LogUser("[soc: {}][send {}b] {}", socket.GetId(), bytesSent, msg);
 			return true;
 		}
-		//std::cout << "[send " << bytesSent << "b fail]: " << msg << std::endl;
 		return false;
 	}
 
@@ -103,7 +93,7 @@ namespace LimeEngine::Net::EchoServer
 			{
                 if (client.Receive(bufferPool, msg))
                 {
-                    std::cout << "[soc " << client.GetId() << "][recv " << msg.size() << "b] " << msg << std::endl;
+                    NetLogger::LogUser("[soc: {}][recv {}b] {}", client.GetId(), msg.size(), msg);
                 }
 
 				//LogReceive(client);
@@ -115,21 +105,23 @@ namespace LimeEngine::Net::EchoServer
 
 	void PollServer()
 	{
-		NetTCPServer<NetPollHandler<NetTCPDataHandler>> server(NetSocketIPv4Address(NetIPv4Address("0.0.0.0"), 3000));
+		NetTCPServer<NetPollEventManager<NetTCPDataHandler>> server(NetSocketIPv4Address(NetIPv4Address("0.0.0.0"), 3000));
 		server.OnConnection([](NetConnection& connection) {
-			std::cout << "[User] Connect: " << connection.GetId() << std::endl;
+            NetLogger::LogUser("Connect: {}", connection.GetId());
 
-			connection.OnDisconnect([](const NetConnection& connection) { std::cout << "[User] Disconnected: " << connection.GetId() << std::endl; });
+			connection.OnDisconnect([](const NetConnection& connection) { NetLogger::LogUser("Disconnected: {}", connection.GetId()); });
 
 			connection.OnMessage(
-				[](const NetConnection& connection, const NetReceivedMessage& receivedMessage) { std::cout << "[User] From: " << connection.GetId() << ", msg: " << receivedMessage.msg << std::endl; });
+				[](const NetConnection& connection, const NetReceivedMessage& receivedMessage) {
+                    NetLogger::LogUser("From: {}, msg: {}", connection.GetId(), receivedMessage.msg);
+                });
 		});
 		while (true)
 		{
 			server.Accept();
 			server.HandleNetEvents();
 			TimedTask<5>([&server]() {
-				std::cout << "[User] Update()" << std::endl;
+                NetLogger::LogUser("Update()");
 				server.Update();
 			});
 			TimedTask<3>([&server]() {
@@ -144,21 +136,23 @@ namespace LimeEngine::Net::EchoServer
 
 	void SelectServer()
 	{
-		NetTCPServer<NetSelectHandler<NetTCPDataHandler>> server(NetSocketIPv4Address(NetIPv4Address("0.0.0.0"), 3000));
+		NetTCPServer<NetSelectEventManager<NetTCPDataHandler>> server(NetSocketIPv4Address(NetIPv4Address("0.0.0.0"), 3000));
 		server.OnConnection([](NetConnection& connection) {
-			std::cout << "[User] Connect: " << connection.GetId() << std::endl;
+            NetLogger::LogUser("Connect: {}", connection.GetId());
 
-			connection.OnDisconnect([](const NetConnection& connection) { std::cout << "[User] Disconnected: " << connection.GetId() << std::endl; });
+			connection.OnDisconnect([](const NetConnection& connection) { NetLogger::LogUser("Disconnected: {}", connection.GetId()); });
 
 			connection.OnMessage(
-				[](const NetConnection& connection, const NetReceivedMessage& receivedMessage) { std::cout << "[User] From: " << connection.GetId() << ", msg: " << receivedMessage.msg << std::endl; });
+				[](const NetConnection& connection, const NetReceivedMessage& receivedMessage) {
+                    NetLogger::LogUser("From: {}, msg: {}", connection.GetId(), receivedMessage.msg);
+                });
 		});
 		while (true)
 		{
 			server.Accept();
 			server.HandleNetEvents();
 			TimedTask<5>([&server]() {
-				std::cout << "Update()" << std::endl;
+                NetLogger::LogUser("Update()");
 				server.Update();
 			});
 			TimedTask<3>([&server]() {
@@ -173,14 +167,14 @@ namespace LimeEngine::Net::EchoServer
 
 	void IOCPServer()
 	{
-		NetTCPIOCPServer<NetIOCPEventManager<NetTCPAsyncDataHandler, NetEventHandler>> server(NetSocketIPv4Address(NetIPv4Address("0.0.0.0"), 3000));
+		NetTCPIOCPServer<NetIOCPEventManager<NetTCPDataHandler, NetEventHandler>> server(NetSocketIPv4Address(NetIPv4Address("0.0.0.0"), 3000));
 		server.OnConnection([](NetConnection& connection) {
-			std::cout << "[User] Connect: " << connection.GetId() << std::endl;
+            NetLogger::LogUser("Connect: {}", connection.GetId());
 
-			connection.OnDisconnect([](const NetConnection& connection) { std::cout << "[User] Disconnected: " << connection.GetId() << std::endl; });
+			connection.OnDisconnect([](const NetConnection& connection) { NetLogger::LogUser("Disconnected: {}", connection.GetId()); });
 
 			connection.OnMessage([](const NetConnection& connection, const NetReceivedMessage& receivedMessage) {
-				std::cout << "[User] From: " << connection.GetId() << ", msg: " << receivedMessage.msg << std::endl;
+                NetLogger::LogUser("From: {}, msg: {}", connection.GetId(), receivedMessage.msg);
 			});
 		});
         bool close = false;
@@ -189,7 +183,7 @@ namespace LimeEngine::Net::EchoServer
 			server.Accept();
 			server.HandleNetEvents();
 			TimedTask<5>([&server]() {
-				std::cout << "[User] Update()" << std::endl;
+                NetLogger::LogUser("Update()");
 				server.Update();
 			});
 			TimedTask<3>([&server]() {

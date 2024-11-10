@@ -1,7 +1,11 @@
 #pragma once
 #define NOMINMAX
 
-#define LENET_WIN32
+#include "PlatformDetection.hpp"
+
+#ifdef LE_BUILD_PLATFORM_WINDOWS
+#define FD_SETSIZE 1024
+#endif
 
 #include <iostream>
 #include <array>
@@ -10,27 +14,11 @@
 #include <format>
 #include <chrono>
 
-#ifdef LENET_WIN32
-#define FD_SETSIZE 1024
-#endif
 #include <winsock2.h>
 #include <WS2tcpip.h>
+
 #include "WinSocketError.hpp"
 #include "NetLogger.hpp"
-
-namespace LimeEngine::Net
-{
-    std::string GetWSAErrorMessage(int err)
-    {
-        char *s = nullptr;
-        FormatMessageA(
-                FORMAT_MESSAGE_ALLOCATE_BUFFER | FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_IGNORE_INSERTS, nullptr,
-                err, MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT), reinterpret_cast<LPSTR>(&s), 0, nullptr);
-        std::string msg = s;
-        LocalFree(s);
-        return msg;
-    }
-}
 
 #define LENET_ERROR(err, msg)                                            \
 	{                                                                    \
@@ -46,3 +34,36 @@ namespace LimeEngine::Net
 	}
 
 #define LENET_LASTERR std::error_code(WSAGetLastError(), std::system_category())
+
+#define LENET_LAST_ERROR() LENET_ERROR(WSAGetLastError())
+#define LENET_LAST_ERROR_MSG(msg) LENET_ERROR(WSAGetLastError(), msg)
+
+namespace LimeEngine::Net {
+    using NativeSocket = SOCKET;
+    using NativeIOContext = OVERLAPPED;
+    using NetBuffer = WSABUF;
+
+    class NetSocket;
+
+    class IOContext;
+
+    std::string GetWSAErrorMessage(int err);
+
+    class NetProtocol {};
+    class NetProtocolTCP
+    {
+        static bool Send(NetSocket& socket, const char* buf, int bufSize, int& outBytesTransferred);
+        static bool SendAsync(NetSocket& socket, NetBuffer* netBuffer, NativeIOContext* nativeIoContext);
+
+        static bool Receive(NetSocket& socket, char* buf, int bufSize, int& outBytesTransferred);
+        static bool ReceiveAsync(NetSocket& socket, NetBuffer* netBuffer, NativeIOContext* nativeIoContext);
+    };
+
+    struct NetTCPDataHandler
+    {
+        static bool Receive(NetSocket& socket, IOContext& context, int& outBytesTransferred);
+        static bool Send(NetSocket& socket, IOContext& context, int& outBytesTransferred);
+        static bool ReceiveAsync(NetSocket& socket, IOContext& context);
+        static bool SendAsync(NetSocket& socket, IOContext& context);
+    };
+}

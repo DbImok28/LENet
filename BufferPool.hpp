@@ -8,6 +8,7 @@
 namespace LimeEngine::Net
 {
     std::string ConcatBuffers(const std::list<char*>& buffers, size_t bufferSize);
+
     template <typename Iterator>
     std::string ConcatBuffers(Iterator begin, Iterator end, size_t bufferSize)
     {
@@ -100,7 +101,7 @@ namespace LimeEngine::Net
             }
         }
 
-        char *TakeBuffer()
+        char* TakeBuffer()
         {
             char* buffer = bufferPool.TakeBuffer();
             buffers.emplace_back(buffer);

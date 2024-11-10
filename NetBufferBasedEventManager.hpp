@@ -1,46 +1,9 @@
 #pragma once
 #include "NetEventHandler.hpp"
 
-#include "NetPollServer.hpp"
-#include "NetSelectServer.hpp"
-
 namespace LimeEngine::Net
 {
     template<typename TNetEventBuffer, typename TNetDataHandler, typename TNetEventHandler = NetEventHandler>
-    class NetBufferBasedEventManager;
-
-    template<typename TNetDataHandler>
-    using NetSelectHandler = NetBufferBasedEventManager<NetSelectBuffer, TNetDataHandler>;
-    template<typename TNetDataHandler>
-    using NetPollHandler = NetBufferBasedEventManager<NetPollBuffer, TNetDataHandler>;
-
-    template<typename TNetDataHandler>
-    using BaseNetEventHandler = NetBufferBasedEventManager<NetPollBuffer, TNetDataHandler>;
-
-    struct NetTCPDataHandler
-    {
-        static bool Receive(NetSocket& socket, IOContext& context, int& outBytesTransferred)
-        {
-            if (socket.Receive(context.wsaBuf.buf, context.wsaBuf.len, outBytesTransferred))
-            {
-                NetLogger::LogCore("Receive {}b: {}", outBytesTransferred, context.wsaBuf.buf);
-                return true;
-            }
-            return false;
-        }
-
-        static bool Send(NetSocket& socket, IOContext& context, int& outBytesTransferred)
-        {
-            if (socket.Send(context.wsaBuf.buf, context.wsaBuf.len, outBytesTransferred))
-            {
-                NetLogger::LogCore("Send {}b{}: {}", outBytesTransferred, ((outBytesTransferred != (context.wsaBuf.len + 1ull)) ? " part" : ""), context.wsaBuf.buf);
-                return true;
-            }
-            return false;
-        }
-    };
-
-    template<typename TNetEventBuffer, typename TNetDataHandler, typename TNetEventHandler>
     class NetBufferBasedEventManager
     {
     public:
@@ -180,7 +143,7 @@ namespace LimeEngine::Net
                 // Exceptions
                 if (netEvent.CheckExcept())
                 {
-                    LENET_ERROR(WSAGetLastError(), "Unable to read from client");
+                    LENET_LAST_ERROR_MSG("Unable to read from client");
                     RemoveConnection(i);
                     continue;
                 }

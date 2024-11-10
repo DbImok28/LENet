@@ -1,12 +1,16 @@
 #pragma once
-#include "NetConnection.hpp"
-#include "NetSockets.hpp"
+#include "NetBufferBasedEventManager.hpp"
 
 namespace LimeEngine::Net
 {
+    class NetPollBuffer;
+
+    template<typename TNetDataHandler, typename TNetEventHandler = NetEventHandler>
+    using NetPollEventManager = NetBufferBasedEventManager<NetPollBuffer, TNetDataHandler, TNetEventHandler>;
+
 	struct PollFD
 	{
-        explicit PollFD(SOCKET fd, SHORT events = POLLRDNORM, SHORT revents = 0) : fd(fd), events(events), revents(revents) {}
+        explicit PollFD(NativeSocket fd, SHORT events = POLLRDNORM, SHORT revents = 0) : fd(fd), events(events), revents(revents) {}
 
         bool CheckRead() const
         {
@@ -35,7 +39,7 @@ namespace LimeEngine::Net
         }
 
     private:
-		SOCKET fd;
+		NativeSocket fd;
 		SHORT events;
 		SHORT revents;
 	};
@@ -43,7 +47,7 @@ namespace LimeEngine::Net
     class NetPollBuffer
     {
     public:
-        bool Add(SOCKET fd)
+        bool Add(NativeSocket fd)
         {
             pollFDs.emplace_back(fd, POLLRDNORM, 0);
             return true;
@@ -58,7 +62,7 @@ namespace LimeEngine::Net
             int result = WSAPoll(reinterpret_cast<WSAPOLLFD*>(pollFDs.data()), pollFDs.size(), timeout);
             if (result < 0)
             {
-                LENET_ERROR(WSAGetLastError(), "Can't to poll");
+                LENET_LAST_ERROR_MSG("Can't to poll");
                 return 0;
             }
             return result;

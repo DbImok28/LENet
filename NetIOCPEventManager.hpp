@@ -1,7 +1,5 @@
 #pragma once
 #include <functional>
-//#include "NetConnection.hpp"
-//#include "NetSockets.hpp"
 #include <cstddef>
 #include "BufferPool.hpp"
 #include "NetEventHandler.hpp"
@@ -15,8 +13,7 @@ namespace LimeEngine::Net
 		IOCompletionPort()
 		{
 			completionPort = CreateIoCompletionPort(INVALID_HANDLE_VALUE, nullptr, 0, 0);
-			if (completionPort == NULL) { LENET_ERROR(WSAGetLastError(), "Can't to create IOCompletionPort"); }
-			//std::cout << "Create IOCP " << completionPort << std::endl;
+			if (completionPort == NULL) { LENET_LAST_ERROR_MSG("Can't to create IOCompletionPort"); }
 		}
 		~IOCompletionPort()
 		{
@@ -33,23 +30,22 @@ namespace LimeEngine::Net
 		{
 			if (CreateIoCompletionPort(handle, completionPort, reinterpret_cast<ULONG_PTR>(key), 0) == NULL)
 			{
-				LENET_ERROR(WSAGetLastError(), "Can't to add socket to IoCompletionPort");
+				LENET_LAST_ERROR_MSG("Can't to add socket to IoCompletionPort");
 			}
-			//std::cout << "Add handle to IOCP " << handle << std::endl;
 		}
-		void Add(SOCKET socket, TKey* key)
+		void Add(NativeSocket socket, TKey* key)
 		{
 			Add(reinterpret_cast<HANDLE>(socket), key);
 		}
 
 		bool Wait(uint32_t timeout, uint32_t& outBytesTransferred, TKey*& outKey, IOContext*& outContext)
 		{ // INFINITE
-			static_assert(offsetof(IOContext, overlapped) == 0, "Overlapped field must be first");
+			static_assert(offsetof(IOContext, nativeIoContext) == 0, "NativeIoContext field must be first");
 
             NetLogger::LogCore("Wait {}ms", timeout);
 
 			if (!GetQueuedCompletionStatus(
-					completionPort, reinterpret_cast<LPDWORD>(&outBytesTransferred), reinterpret_cast<PULONG_PTR>(&outKey), reinterpret_cast<LPOVERLAPPED*>(&outContext), timeout))
+					completionPort, reinterpret_cast<LPDWORD>(&outBytesTransferred), reinterpret_cast<PULONG_PTR>(&outKey), reinterpret_cast<NativeIOContext**>(&outContext), timeout))
             {
 				auto err = GetLastError();
 
@@ -70,34 +66,6 @@ namespace LimeEngine::Net
 
 	private:
 		HANDLE completionPort = INVALID_HANDLE_VALUE;
-	};
-
-	struct NetTCPAsyncDataHandler
-	{
-		static void ReceiveAsync(NetSocket& socket, IOContext& context)
-		{
-			DWORD flags = 0;
-			if (WSARecv(socket.GetNativeSocket(), &context.wsaBuf, 1, nullptr, &flags, &context.overlapped, nullptr) == SOCKET_ERROR)
-			{
-				int err = WSAGetLastError();
-				if (err == WSA_IO_PENDING)
-					std::cout << "Async Receive started" << std::endl;
-				else
-					LENET_ERROR(err, "Can't to receive async message from Client");
-			}
-		}
-		static void SendAsync(NetSocket& socket, IOContext& context)
-		{
-			DWORD flags = 0;
-			if (WSASend(socket.GetNativeSocket(), &context.wsaBuf, 1, nullptr, flags, &context.overlapped, nullptr) == SOCKET_ERROR)
-			{
-				int err = WSAGetLastError();
-				if (err == WSA_IO_PENDING)
-					std::cout << "Async Send started" << std::endl;
-				else
-					LENET_ERROR(err, "Can't to send async message to Client");
-			}
-		}
 	};
 
 	template <typename TNetDataHandler, typename TNetEventHandler = NetEventHandler>
