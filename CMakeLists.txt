@@ -3,4 +3,10 @@ project(LENet)
 
 set(CMAKE_CXX_STANDARD 20)
 
-add_executable(LENet main.cpp BufferPool.cpp NetEventHandler.cpp WinSocketError.cpp NetContext.cpp NetBase.cpp)
+file(GLOB_RECURSE srcs
+    "Source/*.h"
+    "Source/*.hpp"
+    "Source/*.cpp"
+)
+
+add_executable(${CMAKE_PROJECT_NAME} ${srcs})

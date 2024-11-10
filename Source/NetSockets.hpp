@@ -90,10 +90,6 @@ namespace LimeEngine::Net
 			return true;
 		}
 
-		int Send(const std::string& msg, int& outBytesTransferred)
-		{
-			return Send(msg.c_str(), msg.length(), outBytesTransferred);
-		}
 		bool Send(const char* buf, int bufSize, int& outBytesTransferred) const
 		{
 			outBytesTransferred = send(_socket, buf, bufSize, 0);

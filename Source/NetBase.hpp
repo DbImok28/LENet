@@ -14,7 +14,7 @@
 #include <format>
 #include <chrono>
 
-#include <winsock2.h>
+#include <WinSock2.h>
 #include <WS2tcpip.h>
 
 #include "WinSocketError.hpp"
@@ -38,32 +38,11 @@
 #define LENET_LAST_ERROR() LENET_ERROR(WSAGetLastError())
 #define LENET_LAST_ERROR_MSG(msg) LENET_ERROR(WSAGetLastError(), msg)
 
-namespace LimeEngine::Net {
+namespace LimeEngine::Net
+{
     using NativeSocket = SOCKET;
     using NativeIOContext = OVERLAPPED;
     using NetBuffer = WSABUF;
 
-    class NetSocket;
-
-    class IOContext;
-
     std::string GetWSAErrorMessage(int err);
-
-    class NetProtocol {};
-    class NetProtocolTCP
-    {
-        static bool Send(NetSocket& socket, const char* buf, int bufSize, int& outBytesTransferred);
-        static bool SendAsync(NetSocket& socket, NetBuffer* netBuffer, NativeIOContext* nativeIoContext);
-
-        static bool Receive(NetSocket& socket, char* buf, int bufSize, int& outBytesTransferred);
-        static bool ReceiveAsync(NetSocket& socket, NetBuffer* netBuffer, NativeIOContext* nativeIoContext);
-    };
-
-    struct NetTCPDataHandler
-    {
-        static bool Receive(NetSocket& socket, IOContext& context, int& outBytesTransferred);
-        static bool Send(NetSocket& socket, IOContext& context, int& outBytesTransferred);
-        static bool ReceiveAsync(NetSocket& socket, IOContext& context);
-        static bool SendAsync(NetSocket& socket, IOContext& context);
-    };
 }

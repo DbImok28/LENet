@@ -68,7 +68,7 @@ namespace LimeEngine::Net
 		HANDLE completionPort = INVALID_HANDLE_VALUE;
 	};
 
-	template <typename TNetDataHandler, typename TNetEventHandler = NetEventHandler>
+	template <typename TNetProtocol, typename TNetEventHandler = NetEventHandler>
 	class NetIOCPEventManager
 	{
 	public:
@@ -81,7 +81,8 @@ namespace LimeEngine::Net
 			auto& socketContext = socketContexts.emplace_back(std::make_unique<SocketContext>(std::move(socket), &connection));
 			completionPort.Add(socketContext->socket.GetNativeSocket(), socketContext.get());
             netEventHandler.StartRead(*socketContext);
-			TNetDataHandler::ReceiveAsync(socketContext->socket, socketContext->receiveContext);
+
+            TNetProtocol::ReceiveAsync(socketContext->socket, &socketContext->receiveContext.netBuffer, &socketContext->receiveContext.nativeIoContext);
 		}
 
         void DisconnectAllConnections()
@@ -116,7 +117,7 @@ namespace LimeEngine::Net
 			{
                 if (netEventHandler.StartWrite(*socketContext))
                 {
-                    TNetDataHandler::SendAsync(socketContext->socket, socketContext->sendContext);
+                    TNetProtocol::SendAsync(socketContext->socket, &socketContext->sendContext.netBuffer, &socketContext->sendContext.nativeIoContext);
                 }
 			}
 		}
@@ -140,14 +141,14 @@ namespace LimeEngine::Net
 			else if (ioContext->operationType == IOOperationType::Receive)
 			{
                 netEventHandler.Read(*socketContext, bytesTransferred);
-				TNetDataHandler::ReceiveAsync(socketContext->socket, socketContext->receiveContext);
+                TNetProtocol::ReceiveAsync(socketContext->socket, &socketContext->receiveContext.netBuffer, &socketContext->receiveContext.nativeIoContext);
 			}
             // Write
 			else if (ioContext->operationType == IOOperationType::Send)
 			{
                 if (netEventHandler.Write(*socketContext, bytesTransferred))
                 {
-                    TNetDataHandler::SendAsync(socketContext->socket, socketContext->sendContext);
+                    TNetProtocol::SendAsync(socketContext->socket, &socketContext->sendContext.netBuffer, &socketContext->sendContext.nativeIoContext);
                 }
 			}
 		}

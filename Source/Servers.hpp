@@ -4,6 +4,7 @@
 #include "NetPollEventManager.hpp"
 #include "NetSelectEventManager.hpp"
 #include "NetIOCPEventManager.hpp"
+#include "Protocols/NetProtocolTCP.hpp"
 
 namespace LimeEngine::Net::EchoServer
 {
@@ -105,7 +106,7 @@ namespace LimeEngine::Net::EchoServer
 
 	void PollServer()
 	{
-		NetTCPServer<NetPollEventManager<NetTCPDataHandler>> server(NetSocketIPv4Address(NetIPv4Address("0.0.0.0"), 3000));
+		NetTCPServer<NetPollEventManager<NetProtocolTCP>> server(NetSocketIPv4Address(NetIPv4Address("0.0.0.0"), 3000));
 		server.OnConnection([](NetConnection& connection) {
             NetLogger::LogUser("Connect: {}", connection.GetId());
 
@@ -136,7 +137,7 @@ namespace LimeEngine::Net::EchoServer
 
 	void SelectServer()
 	{
-		NetTCPServer<NetSelectEventManager<NetTCPDataHandler>> server(NetSocketIPv4Address(NetIPv4Address("0.0.0.0"), 3000));
+		NetTCPServer<NetSelectEventManager<NetProtocolTCP>> server(NetSocketIPv4Address(NetIPv4Address("0.0.0.0"), 3000));
 		server.OnConnection([](NetConnection& connection) {
             NetLogger::LogUser("Connect: {}", connection.GetId());
 
@@ -167,7 +168,7 @@ namespace LimeEngine::Net::EchoServer
 
 	void IOCPServer()
 	{
-		NetTCPIOCPServer<NetIOCPEventManager<NetTCPDataHandler, NetEventHandler>> server(NetSocketIPv4Address(NetIPv4Address("0.0.0.0"), 3000));
+		NetTCPIOCPServer<NetIOCPEventManager<NetProtocolTCP, NetEventHandler>> server(NetSocketIPv4Address(NetIPv4Address("0.0.0.0"), 3000));
 		server.OnConnection([](NetConnection& connection) {
             NetLogger::LogUser("Connect: {}", connection.GetId());
 

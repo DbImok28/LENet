@@ -40,7 +40,8 @@ namespace LimeEngine::Net
     }
 
     template<size_t BufferSize>
-    class BufferPool {
+    class BufferPool
+    {
     public:
         explicit BufferPool(size_t bufferCount = 8)
         {

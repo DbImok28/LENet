@@ -3,7 +3,7 @@
 
 namespace LimeEngine::Net
 {
-    template<typename TNetEventBuffer, typename TNetDataHandler, typename TNetEventHandler = NetEventHandler>
+    template<typename TNetEventBuffer, typename TNetProtocol, typename TNetEventHandler = NetEventHandler>
     class NetBufferBasedEventManager
     {
     public:
@@ -101,7 +101,8 @@ namespace LimeEngine::Net
                 if (netEvent.CheckRead())
                 {
                     int bytesTransferred;
-                    if (TNetDataHandler::Receive(socketContext.socket, socketContext.receiveContext, bytesTransferred))
+                    NetBuffer& netBuffer = socketContext.receiveContext.netBuffer;
+                    if (TNetProtocol::Receive(socketContext.socket, netBuffer.buf, netBuffer.len, bytesTransferred))
                     {
                         netEventHandler.Read(socketContext, bytesTransferred);
                     }
@@ -117,7 +118,8 @@ namespace LimeEngine::Net
                 if (netEvent.CheckWrite() && netEventHandler.ReadyToWrite(socketContext))
                 {
                     int bytesTransferred;
-                    if (TNetDataHandler::Send(socketContext.socket, socketContext.sendContext, bytesTransferred))
+                    NetBuffer& netBuffer = socketContext.sendContext.netBuffer;
+                    if (TNetProtocol::Send(socketContext.socket, netBuffer.buf, netBuffer.len, bytesTransferred))
                     {
                         if (!netEventHandler.Write(socketContext, bytesTransferred))
                         {
