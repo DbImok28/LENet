@@ -5,6 +5,7 @@
 #include "NetSelectEventManager.hpp"
 #include "NetIOCPEventManager.hpp"
 #include "Protocols/NetProtocolTCP.hpp"
+#include "NetServer.hpp"
 
 namespace LimeEngine::Net::EchoServer
 {
@@ -27,10 +28,10 @@ namespace LimeEngine::Net::EchoServer
 		int bytesReceived;
 		if (socket.Receive(buf.data(), buf.size(), bytesReceived))
 		{
-            NetLogger::LogUser("[soc: {}][recv {}b] {}", socket.GetId(), bytesReceived, buf.data());
+			NetLogger::LogUser("[soc: {}][recv {}b] {}", socket.GetId(), bytesReceived, buf.data());
 			return true;
 		}
-        return false;
+		return false;
 	}
 
 	bool LogSend(NetSocket& socket, const std::string& msg = "Hello")
@@ -38,7 +39,7 @@ namespace LimeEngine::Net::EchoServer
 		int bytesSent;
 		if (socket.Send(msg.c_str(), msg.size() + 1, bytesSent))
 		{
-            NetLogger::LogUser("[soc: {}][send {}b] {}", socket.GetId(), bytesSent, msg);
+			NetLogger::LogUser("[soc: {}][send {}b] {}", socket.GetId(), bytesSent, msg);
 			return true;
 		}
 		return false;
@@ -72,9 +73,14 @@ namespace LimeEngine::Net::EchoServer
 		"treatise on the theory of ethics, very popular during the Renaissance. The first line of Lorem Ipsum, \"Lorem ipsum dolor sit amet..\", comes from a line in section "
 		"1.10.32. [END]";
 
-    const char message1KiB[1024] =
-    "Mauris consectetur, lacus id porttitor maximus, ante tellus gravida enim, id ultrices ar arcu vitae lacus. in justo. Suspendisse ultricies sodales finibus. Vivamus vel dui mollis, hendrerit neque sed, elementum risus. Suspendisse ullamcorper justo a feugiat feugiat. Maecenas condimentum lectus sed vestibulum interdum. Vestibulum ante ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Nulla lacus nunc, lacinia et quam in, commodo porttitor dolor. Aenean scelerisque velit ipsum, eget dapibus ligula bibendum vel. Mauris sit amet suscipit massa, vestibulum laoreet tellus. Sed volutpat tempus dictum. Nunc venenatis lacus vitae congue placerat. Quisque euismod ante nisi, vel accumsan elit auctor a. Vivamus sit amet ullamcorper nibh. Nam ut sagittis ex, sed varius tortor."
-    "Praesent nulla enim, tempus vel volutpat lacinia, eleifend laoreet lacus. Sed mattis ultrices erat, a , quis imperdiet tellus viverra. Nulla cursus varius orci ut semper. Suspendisse id justo nunc. Duis semper pharetra laoreet.";
+	const char message1KiB[1024] =
+		"Mauris consectetur, lacus id porttitor maximus, ante tellus gravida enim, id ultrices ar arcu vitae lacus. in justo. Suspendisse ultricies sodales finibus. Vivamus vel "
+		"dui mollis, hendrerit neque sed, elementum risus. Suspendisse ullamcorper justo a feugiat feugiat. Maecenas condimentum lectus sed vestibulum interdum. Vestibulum ante "
+		"ipsum primis in faucibus orci luctus et ultrices posuere cubilia curae; Nulla lacus nunc, lacinia et quam in, commodo porttitor dolor. Aenean scelerisque velit ipsum, "
+		"eget dapibus ligula bibendum vel. Mauris sit amet suscipit massa, vestibulum laoreet tellus. Sed volutpat tempus dictum. Nunc venenatis lacus vitae congue placerat. "
+		"Quisque euismod ante nisi, vel accumsan elit auctor a. Vivamus sit amet ullamcorper nibh. Nam ut sagittis ex, sed varius tortor."
+		"Praesent nulla enim, tempus vel volutpat lacinia, eleifend laoreet lacus. Sed mattis ultrices erat, a , quis imperdiet tellus viverra. Nulla cursus varius orci ut "
+		"semper. Suspendisse id justo nunc. Duis semper pharetra laoreet.";
 
 	void Client(int count = 1)
 	{
@@ -86,119 +92,128 @@ namespace LimeEngine::Net::EchoServer
 			client.SetNonblockingMode();
 		}
 
-        BufferPool<256> bufferPool;
-        std::string msg;
-		while (true)
+		BufferPool<256> bufferPool;
+		std::string msg;
+		bool close = false;
+		while (!close)
 		{
 			for (auto& client : clients)
 			{
-                if (client.Receive(bufferPool, msg))
-                {
-                    NetLogger::LogUser("[soc: {}][recv {}b] {}", client.GetId(), msg.size(), msg);
-                }
+				if (client.Receive(bufferPool, msg)) { NetLogger::LogUser("[soc: {}][recv {}b] {}", client.GetId(), msg.size(), msg); }
 
-				//LogReceive(client);
 				TimedTask<1>([&client]() { LogSend(client, largeMessage); });
-				//TimedTask<2>([&client]() { LogSend(client, largeMessage); });
 			}
 		}
 	}
 
 	void PollServer()
 	{
-		NetTCPServer<NetPollEventManager<NetProtocolTCP>> server(NetSocketIPv4Address(NetIPv4Address("0.0.0.0"), 3000));
+		NetLogger::LogUser("Poll Server");
+
+		NetServer<NetPollEventManager<NetProtocolTCP>> server(NetSocketIPv4Address(NetIPv4Address("0.0.0.0"), 3000));
 		server.OnConnection([](NetConnection& connection) {
-            NetLogger::LogUser("Connect: {}", connection.GetId());
-
-			connection.OnDisconnect([](const NetConnection& connection) { NetLogger::LogUser("Disconnected: {}", connection.GetId()); });
-
-			connection.OnMessage(
-				[](const NetConnection& connection, const NetReceivedMessage& receivedMessage) {
-                    NetLogger::LogUser("From: {}, msg: {}", connection.GetId(), receivedMessage.msg);
-                });
-		});
-		while (true)
-		{
-			server.Accept();
-			server.HandleNetEvents();
-			TimedTask<5>([&server]() {
-                NetLogger::LogUser("Update()");
-				server.Update();
-			});
-			TimedTask<3>([&server]() {
-				if (server.connections.empty()) return;
-				int rndClient = rand() % (server.connections.size());
-				auto connection = server.connections.begin();
-				std::advance(connection, rndClient);
-				connection->messagesToSend.emplace("Hello from server");
-			});
-		}
-	}
-
-	void SelectServer()
-	{
-		NetTCPServer<NetSelectEventManager<NetProtocolTCP>> server(NetSocketIPv4Address(NetIPv4Address("0.0.0.0"), 3000));
-		server.OnConnection([](NetConnection& connection) {
-            NetLogger::LogUser("Connect: {}", connection.GetId());
-
-			connection.OnDisconnect([](const NetConnection& connection) { NetLogger::LogUser("Disconnected: {}", connection.GetId()); });
-
-			connection.OnMessage(
-				[](const NetConnection& connection, const NetReceivedMessage& receivedMessage) {
-                    NetLogger::LogUser("From: {}, msg: {}", connection.GetId(), receivedMessage.msg);
-                });
-		});
-		while (true)
-		{
-			server.Accept();
-			server.HandleNetEvents();
-			TimedTask<5>([&server]() {
-                NetLogger::LogUser("Update()");
-				server.Update();
-			});
-			TimedTask<3>([&server]() {
-				if (server.connections.empty()) return;
-				int rndClient = rand() % (server.connections.size());
-				auto connection = server.connections.begin();
-				std::advance(connection, rndClient);
-				connection->messagesToSend.emplace("Hello from server");
-			});
-		}
-	}
-
-	void IOCPServer()
-	{
-		NetTCPIOCPServer<NetIOCPEventManager<NetProtocolTCP, NetEventHandler>> server(NetSocketIPv4Address(NetIPv4Address("0.0.0.0"), 3000));
-		server.OnConnection([](NetConnection& connection) {
-            NetLogger::LogUser("Connect: {}", connection.GetId());
+			NetLogger::LogUser("Connect: {}", connection.GetId());
 
 			connection.OnDisconnect([](const NetConnection& connection) { NetLogger::LogUser("Disconnected: {}", connection.GetId()); });
 
 			connection.OnMessage([](const NetConnection& connection, const NetReceivedMessage& receivedMessage) {
-                NetLogger::LogUser("From: {}, msg: {}", connection.GetId(), receivedMessage.msg);
+				NetLogger::LogUser("From: {}, msg: {}", connection.GetId(), receivedMessage.msg);
 			});
 		});
-        bool close = false;
+
+		server.AddEventHandler();
+
+		bool close = false;
 		while (!close)
 		{
 			server.Accept();
 			server.HandleNetEvents();
 			TimedTask<5>([&server]() {
-                NetLogger::LogUser("Update()");
+				NetLogger::LogUser("Update()");
 				server.Update();
 			});
 			TimedTask<3>([&server]() {
-				if (server.connections.empty()) return;
-				int rndClient = rand() % (server.connections.size());
-				auto connection = server.connections.begin();
+				if (!server.HasConnections()) return;
+				int rndClient = rand() % (server.NumberOfConnections());
+				auto connection = server.GetConnections().begin();
 				std::advance(connection, rndClient);
 				connection->messagesToSend.emplace("Hello from server");
-                //connection->messagesToSend.emplace(largeMessage);
 			});
-            
-            TimedTask<10>([&close]() {close = true;});
 		}
+		server.DisconnectAll();
+	}
 
-        server.netEventHandler.DisconnectAllConnections();
+	void SelectServer()
+	{
+		NetLogger::LogUser("Select Server");
+
+		NetServer<NetSelectEventManager<NetProtocolTCP>> server(NetSocketIPv4Address(NetIPv4Address("0.0.0.0"), 3000));
+		server.OnConnection([](NetConnection& connection) {
+			NetLogger::LogUser("Connect: {}", connection.GetId());
+
+			connection.OnDisconnect([](const NetConnection& connection) { NetLogger::LogUser("Disconnected: {}", connection.GetId()); });
+
+			connection.OnMessage([](const NetConnection& connection, const NetReceivedMessage& receivedMessage) {
+				NetLogger::LogUser("From: {}, msg: {}", connection.GetId(), receivedMessage.msg);
+			});
+		});
+
+		server.AddEventHandler();
+
+		bool close = false;
+		while (!close)
+		{
+			server.Accept();
+			server.HandleNetEvents();
+			TimedTask<5>([&server]() {
+				NetLogger::LogUser("Update()");
+				server.Update();
+			});
+			TimedTask<3>([&server]() {
+				if (!server.HasConnections()) return;
+				int rndClient = rand() % (server.NumberOfConnections());
+				auto connection = server.GetConnections().begin();
+				std::advance(connection, rndClient);
+				connection->messagesToSend.emplace("Hello from server");
+			});
+		}
+		server.DisconnectAll();
+	}
+
+	void IOCPServer()
+	{
+		NetLogger::LogUser("IOCP Server");
+
+		NetServer<NetIOCPEventManager<NetProtocolTCP, NetEventHandler>> server(NetSocketIPv4Address(NetIPv4Address("0.0.0.0"), 3000));
+		server.OnConnection([](NetConnection& connection) {
+			NetLogger::LogUser("Connect: {}", connection.GetId());
+
+			connection.OnDisconnect([](const NetConnection& connection) { NetLogger::LogUser("Disconnected: {}", connection.GetId()); });
+
+			connection.OnMessage([](const NetConnection& connection, const NetReceivedMessage& receivedMessage) {
+				NetLogger::LogUser("From: {}, msg: {}", connection.GetId(), receivedMessage.msg);
+			});
+		});
+		bool close = false;
+		while (!close)
+		{
+			server.Accept();
+			server.HandleNetEvents();
+			TimedTask<5>([&server]() {
+				NetLogger::LogUser("Update()");
+				server.Update();
+			});
+			TimedTask<3>([&server]() {
+				if (!server.HasConnections()) return;
+				int rndClient = rand() % (server.NumberOfConnections());
+				auto connection = server.GetConnections().begin();
+				std::advance(connection, rndClient);
+				connection->messagesToSend.emplace("Hello from server");
+				//connection->messagesToSend.emplace(largeMessage);
+			});
+
+			TimedTask<10>([&close]() { close = true; });
+		}
+		server.DisconnectAll();
 	}
 }

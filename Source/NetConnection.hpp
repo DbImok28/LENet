@@ -8,60 +8,57 @@ namespace LimeEngine::Net
 	class NetSendMessage
 	{
 	public:
-        NetSendMessage(std::string&& msg) : msg(std::move(msg)) {}
-        NetSendMessage(const std::string& msg) : msg(msg) {}
+		NetSendMessage(std::string&& msg) : msg(std::move(msg)) {}
+		NetSendMessage(const std::string& msg) : msg(msg) {}
 
-    public:
-        std::string msg;
-        bool sended = false;
+	public:
+		std::string msg;
+		bool sended = false;
 	};
 
-    class NetReceivedMessage
-    {
-    public:
-        NetReceivedMessage(std::string&& msg) : msg(std::move(msg)) {}
-        NetReceivedMessage(const std::string& msg) : msg(msg) {}
+	class NetReceivedMessage
+	{
+	public:
+		NetReceivedMessage(std::string&& msg) : msg(std::move(msg)) {}
+		NetReceivedMessage(const std::string& msg) : msg(msg) {}
 
-    public:
-        std::string msg;
-    };
+	public:
+		std::string msg;
+	};
 
-    enum class NetStatus
-    {
-        Init,
-        Error,
-        Opened,
-        MarkForClose,
-        Closed
-    };
+	enum class NetStatus
+	{
+		Init,
+		Error,
+		Opened,
+		MarkForClose,
+		Closed
+	};
 
 	class NetConnection
 	{
 	public:
 		NetConnection()
-        {
-            static uint16_t idCounter = 0;
-            Id = idCounter++;
-        }
-        ~NetConnection()
-        {
-            if (status == NetStatus::MarkForClose)
-            {
-                onDisconnect(*this);
-            }
-        }
+		{
+			static uint16_t idCounter = 0;
+			Id = idCounter++;
+		}
+		~NetConnection()
+		{
+			if (status == NetStatus::MarkForClose) { onDisconnect(*this); }
+		}
 
-        bool operator==(const NetConnection &rhs) const
-        {
-            return Id == rhs.Id;
-        }
+		bool operator==(const NetConnection& rhs) const
+		{
+			return Id == rhs.Id;
+		}
 
-        bool operator!=(const NetConnection &rhs) const
-        {
-            return !(rhs == *this);
-        }
+		bool operator!=(const NetConnection& rhs) const
+		{
+			return !(rhs == *this);
+		}
 
-        void Send(const std::string& message)
+		void Send(const std::string& message)
 		{
 			messagesToSend.emplace(message);
 		}
@@ -75,7 +72,7 @@ namespace LimeEngine::Net
 			if (status == NetStatus::MarkForClose)
 			{
 				onDisconnect(*this);
-                status = NetStatus::Closed;
+				status = NetStatus::Closed;
 				return false;
 			}
 			return true;
@@ -95,10 +92,10 @@ namespace LimeEngine::Net
 			status = NetStatus::MarkForClose;
 		}
 
-        uint16_t GetId() const noexcept
-        {
-            return Id;
-        }
+		uint16_t GetId() const noexcept
+		{
+			return Id;
+		}
 
 		std::queue<NetSendMessage> messagesToSend;
 		std::queue<NetReceivedMessage> receivedMessages;
@@ -107,6 +104,6 @@ namespace LimeEngine::Net
 		std::function<void(const NetConnection&, const NetReceivedMessage&)> onMessage;
 		std::function<void(const NetConnection&)> onDisconnect;
 		NetStatus status = NetStatus::Init;
-        uint16_t Id;
+		uint16_t Id;
 	};
 }
