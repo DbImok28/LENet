@@ -1,3 +1,6 @@
+// Copyright (C) Pavel Jakushik - All rights reserved
+// See the LICENSE file for copyright and licensing details.
+
 #pragma once
 #include "NetEventHandler.hpp"
 
@@ -17,7 +20,7 @@ namespace LimeEngine::Net
 			serverSocket.Bind(address);
 			serverSocket.Listen();
 
-			netEventManager.emplace_back(std::forward<TNetEventHandler>(netEventHandler));
+			netEventManagers.emplace_back(std::forward<TNetEventHandler>(netEventHandler));
 		}
 		explicit NetServer(NetSocketIPv4Address address) : serverSocket(NetAddressType::IPv4)
 		{
@@ -25,17 +28,17 @@ namespace LimeEngine::Net
 			serverSocket.Bind(address);
 			serverSocket.Listen();
 
-			netEventManager.emplace_back();
+			netEventManagers.emplace_back();
 		}
 
 		template <typename TNetEventHandler = NetEventHandler>
 		void AddEventHandler(TNetEventHandler&& netEventHandler)
 		{
-			netEventManager.emplace_back(std::forward<TNetEventHandler>(netEventHandler));
+			netEventManagers.emplace_back(std::forward<TNetEventHandler>(netEventHandler));
 		}
 		void AddEventHandler()
 		{
-			netEventManager.emplace_back();
+			netEventManagers.emplace_back();
 		}
 
 		void Update()
@@ -43,9 +46,13 @@ namespace LimeEngine::Net
 			for (auto connectionIter = connections.begin(); connectionIter != connections.end();)
 			{
 				if (!connectionIter->Update())
+				{
 					connectionIter = connections.erase(connectionIter);
+				}
 				else
+				{
 					++connectionIter;
+				}
 			}
 		}
 
@@ -57,15 +64,18 @@ namespace LimeEngine::Net
 
 		void HandleNetEvents()
 		{
-			for (auto& handler : netEventManager)
+			int index = 0;
+			for (auto& handler : netEventManagers)
 			{
+				NetLogger::LogCore("Handler({})", index++);
+
 				handler.HandleNetEvents();
 			}
 		}
 
 		void DisconnectAll()
 		{
-			for (auto& handler : netEventManager)
+			for (auto& handler : netEventManagers)
 			{
 				handler.DisconnectAllConnections();
 			}
@@ -100,10 +110,10 @@ namespace LimeEngine::Net
 		}
 		TNetEventManager& GetAvailableEventHandler()
 		{
-			auto& availableHandler = netEventManager[availableServerIndex];
+			auto& availableHandler = netEventManagers[availableServerIndex];
 
-			size_t newAvailableServerIndex = (availableServerIndex + 1ull) % netEventManager.size();
-			if (availableHandler.NumberOfConnections() > netEventManager[newAvailableServerIndex].NumberOfConnections())
+			size_t newAvailableServerIndex = (availableServerIndex + 1ull) % netEventManagers.size();
+			if (availableHandler.NumberOfConnections() > netEventManagers[newAvailableServerIndex].NumberOfConnections())
 			{
 				availableServerIndex = newAvailableServerIndex;
 			}
@@ -113,7 +123,7 @@ namespace LimeEngine::Net
 	private:
 		NetSocket serverSocket;
 		std::list<NetConnection> connections;
-		std::vector<TNetEventManager> netEventManager;
+		std::vector<TNetEventManager> netEventManagers;
 		size_t availableServerIndex = 0ull;
 
 		std::function<void(NetConnection&)> onConnection;

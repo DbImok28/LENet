@@ -1,3 +1,6 @@
+// Copyright (C) Pavel Jakushik - All rights reserved
+// See the LICENSE file for copyright and licensing details.
+
 #include "Servers.hpp"
 
 #pragma comment(lib, "Ws2_32.lib")
@@ -26,7 +29,7 @@ int main(int argc, char* argv[])
 	int clientCount = 1;
 
 	// Server type PollServer(1) or SelectServer(2) or IOCPServer(3)
-	int serverTypeOption = 1;
+	int serverTypeOption = 3;
 
 	/////////////////////////////
 

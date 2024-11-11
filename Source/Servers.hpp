@@ -1,3 +1,6 @@
+// Copyright (C) Pavel Jakushik - All rights reserved
+// See the LICENSE file for copyright and licensing details.
+
 #pragma once
 
 #include "NetSockets.hpp"
@@ -194,6 +197,7 @@ namespace LimeEngine::Net::EchoServer
 				NetLogger::LogUser("From: {}, msg: {}", connection.GetId(), receivedMessage.msg);
 			});
 		});
+
 		bool close = false;
 		while (!close)
 		{
@@ -212,7 +216,7 @@ namespace LimeEngine::Net::EchoServer
 				//connection->messagesToSend.emplace(largeMessage);
 			});
 
-			TimedTask<10>([&close]() { close = true; });
+			//TimedTask<10>([&close]() { close = true; });
 		}
 		server.DisconnectAll();
 	}

@@ -1,3 +1,6 @@
+// Copyright (C) Pavel Jakushik - All rights reserved
+// See the LICENSE file for copyright and licensing details.
+
 #include "BufferPool.hpp"
 
 std::string LimeEngine::Net::ConcatBuffers(const std::list<char*>& buffers, size_t bufferSize)
